@@ -33,7 +33,7 @@ public:
 	CEdit	m_newWeibo;
 	WTL::CEdit	m_logInfo;
 
-	Util::Mutex mMutex;
+	string m_strUid;
 
 	BEGIN_DDX_MAP(CMainDlg)
 		DDX_CONTROL_HANDLE(IDC_EDIT_INFO, m_logInfo)
@@ -60,6 +60,7 @@ public:
 	END_UPDATE_UI_MAP()
 
 	BEGIN_MSG_MAP(CMainDlg)
+		COMMAND_HANDLER(IDC_BTN_UNREAD, BN_CLICKED, OnBnClickedBtnUnread)
 		COMMAND_HANDLER(IDC_BTN_SEND, BN_CLICKED, OnBnClickedBtnSend)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
@@ -152,7 +153,6 @@ public:
 	void onResponseProcess(unsigned int optionId, weibo::ParsingObject* resultObj, const int errCode, const int errSubCode, bool isComplated)
 	{
 
-		Util::Lock lock(mMutex);
 
 		if (resultObj)
 		{
@@ -168,7 +168,8 @@ public:
 					USES_CONVERSION;
 					ParsingOauthRet ret;
 					ret.doParse(objPtr);
-
+					
+					m_strUid = ret.uid;
 					//std::string access_token = objPtr->getSubStringByKey("access_token");
 
 					mWeiboPtr->setOption(WOPT_ACCESS_TOKEN, ret.access_token.c_str());
@@ -181,6 +182,16 @@ public:
 			case WBOPT_POST_STATUSES_UPDATE:
 				{
 					m_logInfo.AppendText(_T("\r\n微博发送成功!"));
+				}
+				break;
+			case WBOPT_GET_REMIND_UNREAD_COUNT:
+				{
+					USES_CONVERSION;
+					string strCountUnRead = objPtr->getSubStringByKey("status");
+					CString strAdd(A2W(strCountUnRead.c_str()));
+					CString strBefore = "\r\n当前所有未读微博数：";
+					strBefore += strAdd;
+					m_logInfo.AppendText(strBefore);
 				}
 				break;
 				//case WBOPT_GET_ACCOUNT_GET_UID:
@@ -204,7 +215,7 @@ public:
 
 		if (pView)
 		{
-			delete pView;
+			pView->DestroyWindow();
 		}
 
 		// unregister message filtering and idle updates
@@ -315,6 +326,12 @@ public:
 
 		m_newWeibo.SetWindowText(_T(""));
 
+
+		return 0;
+	}
+	LRESULT OnBnClickedBtnUnread(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
+	{
+		mWeiboPtr->getMethod()->getRemindUnreadCount(m_strUid.c_str());
 
 		return 0;
 	}
