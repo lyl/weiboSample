@@ -60,6 +60,7 @@ public:
 	END_UPDATE_UI_MAP()
 
 	BEGIN_MSG_MAP(CMainDlg)
+		COMMAND_HANDLER(IDC_BTN_GET_NEW_WEIBO, BN_CLICKED, OnBnClickedBtnGetNewWeibo)
 		COMMAND_HANDLER(IDC_BTN_UNREAD, BN_CLICKED, OnBnClickedBtnUnread)
 		COMMAND_HANDLER(IDC_BTN_SEND, BN_CLICKED, OnBnClickedBtnSend)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
@@ -127,6 +128,8 @@ public:
 		mWeiboPtr->OnDelegateErrored += std::make_pair(this, &CMainDlg::onWeiboRespErrored);
 		mWeiboPtr->OnDelegateWillRelease += std::make_pair(this, &CMainDlg::onWeiboRespStoped);
 
+		//mWeiboPtr->getMethod()->oauth2("leileigood888@sina.com","23213352321335");
+
 		return TRUE;
 	}
 
@@ -192,6 +195,49 @@ public:
 					CString strBefore = "\r\n当前所有未读微博数：";
 					strBefore += strAdd;
 					m_logInfo.AppendText(strBefore);
+				}
+				break;
+			case WBOPT_GET_STATUSES_FRIENDS_TIMELINE:
+				{
+					USES_CONVERSION;
+					ParsingObjectPtr pAllNewWeibo = objPtr->getSubObjectByKey("statuses");
+					for (int i = 0 ; i < pAllNewWeibo->getSubCounts() ; i ++)
+					{
+						
+					
+						ParsingObjectPtr pWeibo = pAllNewWeibo->getSubObjectByIndex(i);
+						string strText = pWeibo->getSubStringByKey("text");
+						ParsingObjectPtr pUser = pWeibo->getSubObjectByKey("user");
+						string strUser = "";
+						if (pUser)
+						{
+							strUser = pUser->getSubStringByKey("screen_name");
+						}
+						else
+						{
+							continue;
+						}
+						CString strHead = _T("\r\n--------------------------\r\n");
+					
+						strUser += "\r\n" + strText;
+
+						DWORD dwNum = MultiByteToWideChar(CP_UTF8,NULL,strUser.c_str(),-1,NULL,0);
+						WCHAR *psText;
+						psText = new WCHAR[dwNum];
+						if(!psText)
+						{
+							delete []psText;
+						}
+						MultiByteToWideChar (CP_UTF8,NULL,strUser.c_str(),-1,psText,dwNum);
+						
+						m_logInfo.AppendText(strHead);
+
+						m_logInfo.AppendText(psText);
+						
+						m_logInfo.AppendText(strHead);
+
+						delete []psText;
+					}
 				}
 				break;
 				//case WBOPT_GET_ACCOUNT_GET_UID:
@@ -332,6 +378,13 @@ public:
 	LRESULT OnBnClickedBtnUnread(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
 	{
 		mWeiboPtr->getMethod()->getRemindUnreadCount(m_strUid.c_str());
+
+		return 0;
+	}
+	LRESULT OnBnClickedBtnGetNewWeibo(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
+	{
+	
+		mWeiboPtr->getMethod()->getStatusesFriendTimeline();
 
 		return 0;
 	}
